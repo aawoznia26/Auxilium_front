@@ -2,6 +2,7 @@ package com.kodilla.auxilium_front.webside;
 
 import com.kodilla.auxilium_front.clients.AuxiliumClient;
 import com.kodilla.auxilium_front.domain.ServicesTypes;
+import com.kodilla.auxilium_front.domain.ServicesTransactionStatus;
 import com.kodilla.auxilium_front.dto.ServicesDto;
 import com.kodilla.auxilium_front.dto.UserDto;
 import com.vaadin.flow.component.button.Button;
@@ -14,16 +15,13 @@ import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
-import com.vaadin.flow.data.provider.Query;
 import com.vaadin.flow.router.*;
-import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-@Route("list")
-@Component
-public class ServicesListing extends VerticalLayout implements HasUrlParameter<String> {
+@Route("myServices")
+public class OwnedServicesListing extends VerticalLayout implements HasUrlParameter<String> {
 
     private HorizontalLayout topMenu = new HorizontalLayout();
     private HorizontalLayout loginButtons = new HorizontalLayout();
@@ -36,24 +34,23 @@ public class ServicesListing extends VerticalLayout implements HasUrlParameter<S
     private Long serviceId;
 
 
+
     private final AuxiliumClient auxiliumClient;
 
     //Images
-    private Image auxiliumLogo = new Image( "http://bz.home.pl/ania/Auxilium/logo.png", "Auxilium logo");
-
+    private Image auxiliumLogo = new Image("http://bz.home.pl/ania/Auxilium/logo.png", "Auxilium logo");
 
     //Buttons
     private Button findButton = new Button("Szukaj");
     private Button createAccountButton = new Button("Załóż konto");
     private Button loginButton = new Button("Zaloguj");
-    private Button assignServiceButton = new Button("Pomagam");
     private Button logoButton = new Button();
     private Button logoutButton = new Button("Wyloguj");
+    private Button acceptButton = new Button("Zaakceptuj");
+    private Button deleteButton = new Button("Usuń");
 
     //Dialogs
     private Dialog serviceDialog = new Dialog();
-    private Dialog noSearchResultDialog = new Dialog();
-
 
     //Select
     private Select<String> citySelect = new Select<>();
@@ -64,11 +61,9 @@ public class ServicesListing extends VerticalLayout implements HasUrlParameter<S
     private Label serviceCity = new Label();
     private Label servicePoints = new Label();
     private Label serviceDescriptionTextField = new Label();
-    private Label noSearchReslutLabel = new Label("Niestety, nic nie znaleźliśmy. Zmodyfikuj kryteria wyszukiwania i sprawdź ponownie");
 
-    public ServicesListing(AuxiliumClient auxiliumClient) {
+    public OwnedServicesListing(AuxiliumClient auxiliumClient) {
         this.auxiliumClient = auxiliumClient;
-
 
         //Top menu
         topMenu.setWidth("100%");
@@ -98,30 +93,32 @@ public class ServicesListing extends VerticalLayout implements HasUrlParameter<S
         serviceSelect.setEmptySelectionAllowed(true);
         serviceSelect.setItemEnabledProvider(Objects::nonNull);
 
-
         selection.add(citySelect);
         selection.add(serviceSelect);
         selection.add(findButton);
         selection.setHeight("105px");
-        selection.setAlignItems(FlexComponent.Alignment.CENTER);
+        selection.setAlignItems(Alignment.CENTER);
         selection.getStyle().set("margin-right", "7%");
         findButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY_INLINE);
         findButton.getElement().getStyle().set("color", "#007481");
         findButton.getStyle().set("font-size", "20px");
         findButton.addClickListener(e -> {
+            String location;
             String selectedCity = citySelect.getValue();
             String selectedService = serviceSelect.getValue();
-            if(!selectedCity.equals("null") && !selectedService.equals("null")){
-                servicesList.setItems(auxiliumClient.getServicesFilteredByCityAndType(selectedCity, selectedService));
-            } else if (!selectedCity.equals("null") && selectedService.equals("null")) {
-                servicesList.setItems(auxiliumClient.getServicesFilteredByCity(selectedCity));
-            } else if (selectedCity.equals("null") && !selectedService.equals("null")) {
-                servicesList.setItems(auxiliumClient.getServicesFilteredByType(selectedService));
+            if (selectedCity != null && selectedService != null) {
+                location = "list/" + selectedService + "&" + selectedCity + "&" + uuid;
+                findButton.getUI().ifPresent(ui ->
+                        ui.navigate(location));
+            } else if (selectedCity == null && selectedService != null) {
+                location = "list/" + selectedService + "&null" + "&" + uuid;
+                findButton.getUI().ifPresent(ui ->
+                        ui.navigate(location));
+            } else if (selectedCity != null && selectedService == null) {
+                location = "list/null&" + selectedCity + "&" + uuid;
+                findButton.getUI().ifPresent(ui ->
+                        ui.navigate(location));
             }
-            long l = servicesList.getDataProvider().size(new Query<>());
-            if(l == 0){
-                noSearchResultDialog.open();
-            };
         });
 
         //Login&CreateAccount
@@ -165,7 +162,7 @@ public class ServicesListing extends VerticalLayout implements HasUrlParameter<S
         logoButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY);
         logoButton.addClickListener(e -> {
             String location;
-            if(uuid == null){
+            if (uuid == null) {
                 location = "";
             } else {
                 location = "" + uuid;
@@ -178,15 +175,29 @@ public class ServicesListing extends VerticalLayout implements HasUrlParameter<S
         //List
         add(servicesList);
         servicesList.setWidth("100%");
-        servicesList.setItems(auxiliumClient.getAllServices());
         servicesList.setColumns("city", "name", "description", "points");
         servicesList.getColumnByKey("city").setHeader("miasto");
         servicesList.getColumnByKey("description").setHeader("szczegóły");
         servicesList.getColumnByKey("name").setHeader("rodzaj pomocy");
         servicesList.getColumnByKey("points").setHeader("punkty");
 
+        acceptButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_PRIMARY);
+        acceptButton.addClickListener(e -> {
+            acceptTransaction(serviceId);
+            serviceDialog.close();
+        });
+
+
+        deleteButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY);
+        deleteButton.getElement().getStyle().set("color", "#007481");
+        deleteButton.getStyle().set("font-size", "15px");
+        deleteButton.addClickListener(e -> {
+            deleteService(serviceId);
+            serviceDialog.close();
+        });
+
         dialogView.add(serviceTitle, serviceCity, serviceDescriptionTextField, dialogButtonView);
-        dialogButtonView.add(servicePoints, assignServiceButton);
+        dialogButtonView.add(servicePoints);
         dialogButtonView.setAlignItems(Alignment.END);
         serviceDialog.setWidth("500px");
         serviceDialog.setMinHeight("400px");
@@ -194,16 +205,12 @@ public class ServicesListing extends VerticalLayout implements HasUrlParameter<S
         serviceTitle.getStyle().set("color", "#007481");
         serviceTitle.getStyle().set("font-weight", "bold");
         serviceDescriptionTextField.getStyle().set("font-size", "20px");
-        assignServiceButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_PRIMARY);
-        assignServiceButton.addClickListener(e -> {
-            assignTransaction(this.uuid, serviceId);
-            serviceDialog.close();
-        });
 
         servicesList.setSelectionMode(Grid.SelectionMode.NONE);
         servicesList.getStyle().set("border-color", "#007481");
         servicesList.addItemClickListener(
                 event -> {
+                    event.getItem().getId();
                     serviceDialog.open();
                     serviceDialog.add(dialogView);
                     serviceTitle.setText(event.getItem().getName());
@@ -211,41 +218,38 @@ public class ServicesListing extends VerticalLayout implements HasUrlParameter<S
                     serviceCity.setText(event.getItem().getCity());
                     servicePoints.setText(String.valueOf(event.getItem().getPoints()) + " punktów");
                     serviceId = event.getItem().getId();
+                    if(event.getItem().getServicesTransactionStatus() == ServicesTransactionStatus.PUBLISHED){
+                        dialogButtonView.add(deleteButton);
+                    }
+                    if(event.getItem().getServicesTransactionStatus() == ServicesTransactionStatus.ASSIGNED){
+                        dialogButtonView.add(acceptButton);
+                    }
                 });
-
-        //Search
-        noSearchResultDialog.add(noSearchReslutLabel);
-        noSearchResultDialog.setWidth("500px");
-        noSearchResultDialog.setMinHeight("400px");
-        noSearchReslutLabel.getStyle().set("color", "#007481");
-        noSearchReslutLabel.getStyle().set("font-weight", "bold");
-        noSearchReslutLabel.getStyle().set("font-size", "20px");
-
 
     }
 
     @Override
     public void setParameter(BeforeEvent event, @OptionalParameter String parameter) {
-        if(parameter != null){
-            String[] splitedParameter = parameter.split("&");
-            serviceSelect.setValue(splitedParameter[0]);
-            citySelect.setValue(splitedParameter[1]);
-            findButton.click();
-            if(!splitedParameter[2].equals("null")){
-                changeLoginButtonToLogout();
-                uuid = splitedParameter[2];
-            }
+        if (parameter != null && !parameter.equals("null")) {
+            uuid = parameter;
+            servicesList.setItems(auxiliumClient.getAllServicesOwnedByUser(uuid));
+            changeLoginButtonToLogout();
         }
     }
 
-    private void changeLoginButtonToLogout(){
+    private void changeLoginButtonToLogout() {
         loginButton.getElement().removeFromParent();
         createAccountButton.getElement().removeFromParent();
         loginButtons.add(logoutButton);
     }
 
-    private void assignTransaction(String uuid, Long serviceId){
+    private void acceptTransaction(Long serviceId){
         UserDto userDto = auxiliumClient.getUserByUUID(uuid);
-        auxiliumClient.assignTransaction(userDto, serviceId);
+        auxiliumClient.acceptTransaction(serviceId);
     }
+
+    private void deleteService(Long serviceId){
+        auxiliumClient.deleteService(serviceId);
+    }
+
 }

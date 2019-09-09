@@ -19,6 +19,7 @@ public class UserDto {
     private long phone;
     private String email;
     private String password;
+    private boolean notifyAboutPoints;
 
     public UserDto(String name, long phone, String email, String password) {
         this.name = name;

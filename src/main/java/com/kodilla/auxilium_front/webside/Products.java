@@ -2,31 +2,30 @@ package com.kodilla.auxilium_front.webside;
 
 import com.kodilla.auxilium_front.clients.AuxiliumClient;
 import com.kodilla.auxilium_front.domain.ServicesTypes;
+
+import com.kodilla.auxilium_front.dto.ProductDto;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.contextmenu.MenuItem;
+import com.vaadin.flow.component.grid.Grid;
 import com.vaadin.flow.component.html.Image;
-import com.vaadin.flow.component.html.Label;
-import com.vaadin.flow.component.icon.Icon;
-import com.vaadin.flow.component.icon.VaadinIcon;
-import com.vaadin.flow.component.menubar.MenuBar;
-import com.vaadin.flow.component.menubar.MenuBarVariant;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
 import com.vaadin.flow.component.orderedlayout.FlexLayout;
 import com.vaadin.flow.component.orderedlayout.HorizontalLayout;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
+import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.router.BeforeEvent;
 import com.vaadin.flow.router.HasUrlParameter;
 import com.vaadin.flow.router.OptionalParameter;
 import com.vaadin.flow.router.Route;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-@Route
-public class Main extends VerticalLayout implements HasUrlParameter<String>{
+@Route("products")
+@Component
+public class Products extends VerticalLayout implements HasUrlParameter<String> {
 
     private final AuxiliumClient auxiliumClient;
     private String uuid;
@@ -36,20 +35,10 @@ public class Main extends VerticalLayout implements HasUrlParameter<String>{
     private HorizontalLayout selection = new HorizontalLayout();
     private VerticalLayout leftMenu = new VerticalLayout();
     private FlexLayout pictures = new FlexLayout();
-    @Autowired
-    private AddServiceFormDialog addServiceFormDialog;
-    private AddServiceCCDialog addServiceCCDialog = new AddServiceCCDialog();
-
+    private Grid<ProductDto> productList = new Grid<>(ProductDto.class);
 
     //Images
-    private Image womanInGarden = new Image( "http://bz.home.pl/ania/Auxilium/Woman_in_garden2.jpg", "Woman in garden");
-    private Image oldManInHat = new Image( "http://bz.home.pl/ania/Auxilium/Old_man_in_hat1.jpg", "Old man in hat");
-    private Image oldManUnderground = new Image( "http://bz.home.pl/ania/Auxilium/Old_man_underground3.jpg", "Old man underground");
-    private Image ladyGoingDownstairs = new Image( "http://bz.home.pl/ania/Auxilium/Lady_going_downstairs4.jpg", "Lady going downstairs");
     private Image auxiliumLogo = new Image( "http://bz.home.pl/ania/Auxilium/logo.png", "Auxilium logo");
-    private Image heart = new Image( "http://bz.home.pl/ania/Auxilium/heart2.jpg", "heart");
-    private Image hands = new Image( "http://bz.home.pl/ania/Auxilium/hands.jpeg", "hands");
-    private Image manOutside = new Image( "http://bz.home.pl/ania/Auxilium/Man_outside2.jpg", "Man outside");
 
     //Buttons
     private Button findButton = new Button("Szukaj");
@@ -62,11 +51,8 @@ public class Main extends VerticalLayout implements HasUrlParameter<String>{
     private Select<String> citySelect = new Select<>();
     private Select<String> serviceSelect = new Select<>();
 
-    //Labels
-    private Label yourPointsTextLabel = new Label("Twoje punkty ");
-    private Label yourPointsLabel = new Label();
 
-    public Main(AuxiliumClient auxiliumClient) {
+    public Products(AuxiliumClient auxiliumClient) {
         this.auxiliumClient = auxiliumClient;
 
         //Top menu
@@ -112,11 +98,11 @@ public class Main extends VerticalLayout implements HasUrlParameter<String>{
             String location;
             String selectedCity = citySelect.getValue();
             String selectedService = serviceSelect.getValue();
-            if( selectedCity != null && selectedService != null ){
+            if (selectedCity != null && selectedService != null) {
                 location = "list/" + selectedService + "&" + selectedCity + "&" + uuid;
                 findButton.getUI().ifPresent(ui ->
                         ui.navigate(location));
-            } else if (selectedCity == null && selectedService != null){
+            } else if (selectedCity == null && selectedService != null) {
                 location = "list/" + selectedService + "&null" + "&" + uuid;
                 findButton.getUI().ifPresent(ui ->
                         ui.navigate(location));
@@ -174,95 +160,44 @@ public class Main extends VerticalLayout implements HasUrlParameter<String>{
                     ui.navigate(location));
         });
 
-        //Pictures
-        pictures.add(oldManInHat, manOutside, heart, womanInGarden, ladyGoingDownstairs, oldManUnderground, hands);
-        pictures.setWrapMode(FlexLayout.WrapMode.WRAP);
-        womanInGarden.setHeight("330px");
-        womanInGarden.getStyle().set("padding", "10px");
-        oldManInHat.setHeight("330px");
-        oldManInHat.getStyle().set("padding", "10px");
-        oldManUnderground.setHeight("330px");
-        oldManUnderground.getStyle().set("padding", "10px");
-        ladyGoingDownstairs.setHeight("330px");
-        ladyGoingDownstairs.getStyle().set("padding", "10px");
-        heart.setHeight("330px");
-        heart.getStyle().set("padding", "10px");
-        hands.setHeight("330px");
-        hands.getStyle().set("padding", "10px");
-        manOutside.setHeight("330px");
-        manOutside.getStyle().set("padding", "10px");
+        //List
+        add(productList);
+        productList.setWidth("100%");
+        productList.setItems(auxiliumClient.getAllProducts());
+        productList.setColumns("title", "subtitle", "price");
+        productList.addColumn(new ComponentRenderer<>(e -> {
+            String alt = "zdjęcie";
+            if(e.getTitle() != null){
+                alt = e.getTitle();
+            }
+            Image image = new Image(e.getListImage(), alt);
+            image.setHeight("150px");
+            image.setWidth("150px");
+            return image;
+        }));
 
+        productList.addColumn(new ComponentRenderer<>(e -> {
+            Button collectProduct = new Button("Odbierz nagrodę");
+            collectProduct.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_PRIMARY);
+            collectProduct.addClickListener( event -> {
+                ProductDto productDto = new ProductDto(e.getOfferId(), e.getTitle(), e.getSubtitle(), e.getPrice(), e.getListImage());
+                auxiliumClient.collectProduct(productDto, this.uuid);
+            });
+            return collectProduct;
+        }));
+        productList.getColumnByKey("title").setHeader("nazwa");
+        productList.getColumnByKey("subtitle").setHeader("opis");
+        productList.getColumnByKey("price").setHeader("punkty");
+        productList.setSelectionMode(Grid.SelectionMode.NONE);
+        productList.getStyle().set("border-color", "#FDDA24");
     }
 
     @Override
     public void setParameter(BeforeEvent event, @OptionalParameter String parameter) {
-        if(parameter != null){
-            addMenuForLoggedUsers();
-            changeLoginButtonToLogout();
-            yourPointsLabel.setText(auxiliumClient.getUserAvailablePoints(parameter).toString());
+        if (parameter != null && !parameter.equals("null")) {
             uuid = parameter;
+
         }
     }
-
-    private void addMenuForLoggedUsers(){
-        pictures.addComponentAsFirst(leftMenu);
-        leftMenu.setMaxWidth("433px");
-        leftMenu.setMaxHeight("330px");
-        leftMenu.getStyle().set("background-color", "rgb(253, 218, 36, 0.3)");
-        leftMenu.getStyle().set("margin", "10px 10px 10px 10px");
-        leftMenu.getStyle().set("border-radius", "15px");
-        leftMenu.getStyle().set("padding", "10px");
-
-        leftMenu.add(yourPointsTextLabel, yourPointsLabel);
-        leftMenu.setAlignItems(Alignment.CENTER);
-        yourPointsTextLabel.getStyle().set("font-size", "30px");
-        yourPointsLabel.getStyle().set("font-size", "40px");
-        yourPointsLabel.getStyle().set("font-weight", "bold");
-        yourPointsLabel.getStyle().set("margin-top", "0px");
-
-        MenuBar menuBar = new MenuBar();
-        leftMenu.add(menuBar);
-        menuBar.setOpenOnHover(true);
-        menuBar.addThemeVariants(MenuBarVariant.LUMO_TERTIARY);
-        MenuItem help = menuBar.addItem("Twoja Pomoc");
-        MenuItem prizes = menuBar.addItem("Nagrody");
-        MenuItem myAccount = menuBar.addItem("Ustawienia");
-
-        help.getElement().getStyle().set("color", "#007481");
-        help.getElement().getStyle().set("font-size", "20px");
-        prizes.getElement().getStyle().set("color", "#007481");
-        prizes.getElement().getStyle().set("font-size", "20px");
-        myAccount.getElement().getStyle().set("color", "#007481");
-        myAccount.getElement().getStyle().set("font-size", "20px");
-
-        help.addComponentAsFirst(new Icon(VaadinIcon.HANDSHAKE));
-        prizes.addComponentAsFirst(new Icon(VaadinIcon.GIFT));
-        myAccount.addComponentAsFirst(new Icon(VaadinIcon.EDIT));
-
-        help.getSubMenu().addItem("Zgłoszone prośby", e -> { getUI().ifPresent((ui -> ui.navigate("myServices/" + uuid))); });
-        help.getSubMenu().addItem("Dodaj prośbę - infolinia", e -> addServiceCCDialog.openDialog() );
-        help.getSubMenu().addItem("Dodaj prośbę - formularz", e -> {
-            addServiceFormDialog.openDialog();
-            addServiceFormDialog.setUuid(uuid);
-        });
-        help.getSubMenu().addItem("Pomogłeś już", e -> { getUI().ifPresent((ui -> ui.navigate("servicesAssigned/" + uuid)));});
-        help.getSubMenu().getChildren().forEach(e ->e.getElement().getStyle().set("color", "#007481"));
-        help.getSubMenu().getChildren().forEach(e ->e.getElement().getStyle().set("background-color", "rgb(253, 218, 36, 0.3)"));
-
-        prizes.getSubMenu().addItem("Bilety", e -> { getUI().ifPresent((ui -> ui.navigate("events/" + uuid))); });
-        prizes.getSubMenu().addItem("Prezenty", e -> { getUI().ifPresent((ui -> ui.navigate("products/" + uuid))); });
-        prizes.getSubMenu().getChildren().forEach(e ->e.getElement().getStyle().set("color", "#007481"));
-        prizes.getSubMenu().getChildren().forEach(e ->e.getElement().getStyle().set("background-color", "rgb(253, 218, 36, 0.3)"));
-
-        myAccount.addClickListener(e -> { myAccount.getUI().ifPresent(ui -> ui.navigate("myAccount/" + uuid)); });
-
-    }
-
-    private void changeLoginButtonToLogout(){
-        loginButton.getElement().removeFromParent();
-        createAccountButton.getElement().removeFromParent();
-        loginButtons.add(logoutButton);
-    }
-
 
 }

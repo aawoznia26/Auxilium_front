@@ -1,6 +1,6 @@
 package com.kodilla.auxilium_front.webside;
 
-import com.kodilla.auxilium_front.clients.AuciliumClient;
+import com.kodilla.auxilium_front.clients.AuxiliumClient;
 import com.kodilla.auxilium_front.domain.ServicesTypes;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
@@ -14,11 +14,13 @@ import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.router.Route;
+import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Objects;
 
 @Route("login")
+@Component
 public class Login extends VerticalLayout {
 
     private HorizontalLayout topMenu = new HorizontalLayout();
@@ -30,7 +32,7 @@ public class Login extends VerticalLayout {
     private VerticalLayout loginLayout = new VerticalLayout();
     private String uuid;
 
-    private final AuciliumClient auciliumClient;
+    private final AuxiliumClient auxiliumClient;
 
     private boolean logged = true;
 
@@ -65,8 +67,8 @@ public class Login extends VerticalLayout {
     private Dialog loginIncorrectDialog = new Dialog();
 
 
-    public Login(AuciliumClient auciliumClient) {
-        this.auciliumClient = auciliumClient;
+    public Login(AuxiliumClient auxiliumClient) {
+        this.auxiliumClient = auxiliumClient;
 
 
         //Top menu
@@ -83,7 +85,7 @@ public class Login extends VerticalLayout {
         //Select
         citySelect.setRequiredIndicatorVisible(true);
         citySelect.setLabel("Miasto");
-        citySelect.setItems(auciliumClient.getCities());
+        citySelect.setItems(auxiliumClient.getCities());
         citySelect.setPlaceholder("Wybierz miasto");
         citySelect.setEmptySelectionCaption("Wybierz miasto");
         citySelect.setEmptySelectionAllowed(true);
@@ -105,6 +107,8 @@ public class Login extends VerticalLayout {
         selection.setAlignItems(Alignment.CENTER);
         selection.getStyle().set("margin-right", "7%");
         findButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY_INLINE);
+        findButton.getElement().getStyle().set("color", "#007481");
+        findButton.getStyle().set("font-size", "20px");
         findButton.addClickListener(e -> {
             String location;
             String selectedCity = citySelect.getValue();
@@ -131,6 +135,10 @@ public class Login extends VerticalLayout {
         loginButtons.setAlignItems(Alignment.CENTER);
         loginButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY);
         createAccountButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY);
+        loginButton.getElement().getStyle().set("color", "#007481");
+        loginButton.getStyle().set("font-size", "20px");
+        createAccountButton.getElement().getStyle().set("color", "#007481");
+        createAccountButton.getStyle().set("font-size", "20px");
 
         loginButton.addClickListener(e -> {
             loginButton.getUI().ifPresent((ui ->
@@ -196,18 +204,16 @@ public class Login extends VerticalLayout {
         emailField.setClearButtonVisible(true);
         emailField.setPlaceholder("Wpisz email");
         emailField.setErrorMessage("Wpisz poprawny adres email");
-        emailField.setValue("gafsss@jk.com");
 
         passwordField.setPlaceholder("Wpisz hasło");
         passwordField.setErrorMessage("Wpisz hasło");
-        passwordField.setValue(")(736Kn");
 
 
         loginInFormButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_PRIMARY);
         loginInFormButton.addClickListener(e -> {
-            logged = auciliumClient.login(passwordField.getValue(), emailField.getValue());
+            logged = auxiliumClient.login(passwordField.getValue(), emailField.getValue());
             if(logged){
-                String location = "" + auciliumClient.getUserByLoginData(passwordField.getValue(), emailField.getValue()).getUuid();
+                String location = "" + auxiliumClient.getUserByLoginData(passwordField.getValue(), emailField.getValue()).getUuid();
                 loginInFormButton.getUI().ifPresent(ui ->
                         ui.navigate(location));
             } else {

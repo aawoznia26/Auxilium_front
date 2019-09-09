@@ -15,14 +15,16 @@ repositories {
 }
 
 ext {
-	set('vaadinVersion', "13.0.11")
+	set('vaadinVersion', "14.0.1")
 }
 
 dependencies {
 	implementation 'com.vaadin:vaadin-spring-boot-starter'
 	compile'org.springframework.boot:spring-boot-starter-web'
+	compile ("com.fasterxml.jackson.datatype:jackson-datatype-jsr310")
 	compile'com.google.code.gson:gson:2.8.2'
 	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 

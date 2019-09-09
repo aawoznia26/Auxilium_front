@@ -5,7 +5,7 @@ import com.kodilla.auxilium_front.domain.ServicesTypes;
 import com.kodilla.auxilium_front.dto.UserDto;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.button.ButtonVariant;
-import com.vaadin.flow.component.dialog.Dialog;
+import com.vaadin.flow.component.checkbox.Checkbox;
 import com.vaadin.flow.component.html.Image;
 import com.vaadin.flow.component.html.Label;
 import com.vaadin.flow.component.orderedlayout.FlexComponent;
@@ -16,15 +16,17 @@ import com.vaadin.flow.component.textfield.EmailField;
 import com.vaadin.flow.component.textfield.NumberField;
 import com.vaadin.flow.component.textfield.PasswordField;
 import com.vaadin.flow.component.textfield.TextField;
+import com.vaadin.flow.router.BeforeEvent;
+import com.vaadin.flow.router.HasUrlParameter;
+import com.vaadin.flow.router.OptionalParameter;
 import com.vaadin.flow.router.Route;
-import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.Objects;
 
-@Route("registration")
-@Component
-public class Registration extends VerticalLayout {
+
+@Route("myAccount")
+public class MyAccount extends VerticalLayout implements HasUrlParameter<String> {
 
 
     private HorizontalLayout topMenu = new HorizontalLayout();
@@ -42,25 +44,20 @@ public class Registration extends VerticalLayout {
     private Image auxiliumLogo = new Image( "http://bz.home.pl/ania/Auxilium/logo.png", "Auxilium logo");
 
     //Labels
-    private Label loginLabel = new Label("Załóż konto");
+    private Label loginLabel = new Label("Moje konto - edycja danych");
     private Label loginSentenceLabel = new Label("'Każdy ma coś, co może dać innym'");
     private Label loginAuthorLabel = new Label("Barbara Bush");
-    private Label passwordRequirementsLabel = new Label("Hasło musi zawierać 8 -25 zanków, co najmniej 1 małą literę, dużą literę, cyfrę i znak specjalny");
-    private Label registrationIncorrectLabel = new Label("Podany email lub hasło są nieprawidłowe." +
-            " Spróbuj ponownie.");
 
-
+    //Checkbox
+    Checkbox ifNotifiedAboutPointsChange = new Checkbox("Powiadom mnie o zmianach w moim liczniku punktów");
 
     //Buttons
     private Button findButton = new Button("Szukaj");
     private Button createAccountButton = new Button("Załóż konto");
     private Button loginButton = new Button("Zaloguj");
-    private Button createAccountInFormButton = new Button("Wyślij");
-    private Button loginInFormButton = new Button("Masz już konto, zaloguj się");
+    private Button saveButton = new Button("Zapisz");
     private Button logoButton = new Button();
-
-    //Dialog
-    private Dialog registrationIncorrectDialog = new Dialog();
+    private Button logoutButton = new Button("Wyloguj");
 
     //Select
     private Select<String> citySelect = new Select<>();
@@ -73,7 +70,7 @@ public class Registration extends VerticalLayout {
     private NumberField phoneField = new NumberField("Telefon");
 
 
-    public Registration(AuxiliumClient auxiliumClient) {
+    public MyAccount(AuxiliumClient auxiliumClient) {
         this.auxiliumClient = auxiliumClient;
 
 
@@ -105,7 +102,6 @@ public class Registration extends VerticalLayout {
         serviceSelect.setEmptySelectionAllowed(true);
         serviceSelect.setItemEnabledProvider(Objects::nonNull);
 
-
         selection.add(citySelect);
         selection.add(serviceSelect);
         selection.add(findButton);
@@ -119,21 +115,20 @@ public class Registration extends VerticalLayout {
             String location;
             String selectedCity = citySelect.getValue();
             String selectedService = serviceSelect.getValue();
-            if( selectedCity != null && selectedService != null ){
-                location = "list/" + selectedService + "&" + selectedCity;
-                findButton.getUI().ifPresent((ui ->
-                        ui.navigate(location)));
-            } else if (selectedCity == null && selectedService != null){
-                location = "list/" + selectedService + "&null";
-                findButton.getUI().ifPresent((ui ->
-                        ui.navigate(location)));
+            if (selectedCity != null && selectedService != null) {
+                location = "list/" + selectedService + "&" + selectedCity + "&" + uuid;
+                findButton.getUI().ifPresent(ui ->
+                        ui.navigate(location));
+            } else if (selectedCity == null && selectedService != null) {
+                location = "list/" + selectedService + "&null" + "&" + uuid;
+                findButton.getUI().ifPresent(ui ->
+                        ui.navigate(location));
             } else if (selectedCity != null && selectedService == null) {
-                location = "list/null&" + selectedCity;
-                findButton.getUI().ifPresent((ui ->
-                        ui.navigate(location)));
+                location = "list/null&" + selectedCity + "&" + uuid;
+                findButton.getUI().ifPresent(ui ->
+                        ui.navigate(location));
             }
         });
-
 
         //Login&CreateAccount
         loginButtons.addComponentAsFirst(loginButton);
@@ -146,6 +141,16 @@ public class Registration extends VerticalLayout {
         loginButton.getStyle().set("font-size", "20px");
         createAccountButton.getElement().getStyle().set("color", "#007481");
         createAccountButton.getStyle().set("font-size", "20px");
+
+        logoutButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY);
+        logoutButton.getElement().getStyle().set("color", "#007481");
+        logoutButton.getStyle().set("font-size", "20px");
+        logoutButton.addClickListener(e -> {
+            logoutButton.getUI().ifPresent((ui ->
+                    ui.navigate("")));
+            loginButtons.add(createAccountButton, loginButton);
+            logoutButton.getElement().removeFromParent();
+        });
 
         loginButton.addClickListener(e -> {
             loginButton.getUI().ifPresent((ui ->
@@ -169,14 +174,6 @@ public class Registration extends VerticalLayout {
                     ui.navigate(location));
         });
 
-        //RegistrationIncorrect
-        registrationIncorrectDialog.add(registrationIncorrectLabel);
-        registrationIncorrectDialog.setWidth("500px");
-        registrationIncorrectDialog.setMinHeight("400px");
-        registrationIncorrectLabel.getStyle().set("color", "#007481");
-        registrationIncorrectLabel.getStyle().set("font-weight", "bold");
-        registrationIncorrectLabel.getStyle().set("font-size", "20px");
-
         //Registration
         add(login);
         setAlignItems(Alignment.CENTER);
@@ -194,13 +191,8 @@ public class Registration extends VerticalLayout {
         loginSentenceLabel.getStyle().set("font-style", "italic");
         loginAuthorLabel.getStyle().set("color", "white");
 
-        loginForm.add(loginLabel, nameField, phoneField, emailField,  passwordField, passwordRequirementsLabel, createAccountInFormButton, loginInFormButton);
+        loginForm.add(loginLabel, nameField, phoneField, emailField,  passwordField, ifNotifiedAboutPointsChange, saveButton);
         loginForm.setDefaultHorizontalComponentAlignment(Alignment.CENTER);
-        loginInFormButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_TERTIARY, ButtonVariant.LUMO_SMALL);
-        loginInFormButton.addClickListener(e -> {
-            loginInFormButton.getUI().ifPresent((ui ->
-                    ui.navigate("login")));
-        });
 
         loginLabel.getStyle().set("font-size", "30px");
         loginLabel.getStyle().set("color", "#007481");
@@ -222,32 +214,49 @@ public class Registration extends VerticalLayout {
         passwordField.setPlaceholder("Wpisz hasło");
         passwordField.setErrorMessage("Wpisz hasło");
         passwordField.setWidth("33%");
-        passwordRequirementsLabel.getStyle().set("color", "grey");
-        passwordRequirementsLabel.getStyle().set("font-size", "10px");
 
-        createAccountInFormButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_PRIMARY);
-        createAccountInFormButton.addClickListener(e -> {
-            try{
-                uuid = createUser().getUuid();
-                String location = "" + uuid;
-                createAccountInFormButton.getUI().ifPresent((ui ->
-                        ui.navigate(location)));
-
-            } catch (Exception n) {
-                registrationIncorrectDialog.open();
-            }
+        saveButton.addThemeVariants(ButtonVariant.LUMO_CONTRAST, ButtonVariant.LUMO_PRIMARY);
+        saveButton.addClickListener(e -> {
+            String location = "" + uuid;
+            prepareUserDataToChangeRequest();
+            saveButton.getUI().ifPresent((ui ->
+                    ui.navigate(location)));
             nameField.clear();
             phoneField.clear();
             emailField.clear();
             passwordField.clear();
+            ifNotifiedAboutPointsChange.clear();
         });
 
     }
 
-    private UserDto createUser(){
-        UserDto userDto = new UserDto(nameField.getValue(), Math.round(phoneField.getValue()), emailField.getValue()
-                , passwordField.getValue());
-        return auxiliumClient.createUser(userDto);
-    }
-}
 
+    @Override
+    public void setParameter(BeforeEvent event, @OptionalParameter String parameter) {
+        if (parameter != null && !parameter.equals("null")) {
+            uuid = parameter;
+            changeLoginButtonToLogout();
+            UserDto userDto = auxiliumClient.getUserByUUID(uuid);
+            nameField.setValue(userDto.getName());
+            phoneField.setValue(Double.valueOf(userDto.getPhone()));
+            emailField.setValue(userDto.getEmail());
+            passwordField.setValue(userDto.getPassword());
+            ifNotifiedAboutPointsChange.setValue(userDto.isNotifyAboutPoints());
+        }
+    }
+
+    private void changeLoginButtonToLogout() {
+        loginButton.getElement().removeFromParent();
+        createAccountButton.getElement().removeFromParent();
+        loginButtons.add(logoutButton);
+    }
+
+    private void prepareUserDataToChangeRequest() {
+        UserDto userDto = auxiliumClient.getUserByUUID(uuid);
+        auxiliumClient.changeUserData(new UserDto(userDto.getId(), userDto.getUuid(), nameField.getValue()
+                , Math.round(phoneField.getValue()), emailField.getValue(), passwordField.getValue()
+                , ifNotifiedAboutPointsChange.getValue()));
+
+    }
+
+}
