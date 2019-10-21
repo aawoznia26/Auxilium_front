@@ -66,6 +66,8 @@ public class Main extends VerticalLayout implements HasUrlParameter<String>{
     private Label yourPointsTextLabel = new Label("Twoje punkty ");
     private Label yourPointsLabel = new Label();
 
+    private MenuBar menuBar = new MenuBar();
+
     public Main(AuxiliumClient auxiliumClient) {
         this.auxiliumClient = auxiliumClient;
 
@@ -220,10 +222,10 @@ public class Main extends VerticalLayout implements HasUrlParameter<String>{
         yourPointsLabel.getStyle().set("font-weight", "bold");
         yourPointsLabel.getStyle().set("margin-top", "0px");
 
-        MenuBar menuBar = new MenuBar();
         leftMenu.add(menuBar);
         menuBar.setOpenOnHover(true);
         menuBar.addThemeVariants(MenuBarVariant.LUMO_TERTIARY);
+        menuBar.removeAll();
         MenuItem help = menuBar.addItem("Twoja Pomoc");
         MenuItem prizes = menuBar.addItem("Nagrody");
         MenuItem myAccount = menuBar.addItem("Ustawienia");
